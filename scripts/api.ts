@@ -1,5 +1,6 @@
 import axios, {AxiosHeaders, AxiosRequestConfig, AxiosResponse} from "axios";
-import {auth, dataUser, exipred, getData, globalLogin} from "@/scripts/store/AuthStore";
+import {getAuthToken, globalLogin} from "@/scripts/store/AuthStore";
+import {showError} from "@/scripts/store/ErrorStore";
 
 export interface ResponseOK<T = any> {
     data: T;
@@ -19,7 +20,7 @@ export interface ParamsApi {
     queryString?: Map<string, any> | Record<string, any> | null;
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | string;
     body?: any;
-    key?: string
+    key?: string // username opzionale per recuperare token legacy
 }
 
 export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
@@ -36,8 +37,8 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
                 queryParams = params.queryString;
             }
         }
-        // TODO: Recuperare il token reale da Expo Secure Store
-        const token: string | null = await getData(params.key)
+
+        const token = params.url.includes('login') ? null : await getAuthToken(params.key);
 
         const headers = new AxiosHeaders();
         headers.set('Content-Type', 'application/json');
@@ -58,10 +59,10 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
             params: queryParams, // Axios appende la query string in automatico in modo sicuro
             data: params.body
         };
-
+        console.log(JSON.stringify(config, null,2))
         const response: AxiosResponse = await axios(config);
         if (params.url.includes('login')) {
-            await globalLogin(response.data)
+            await globalLogin({ response: response.data, fallbackUsername: params.body?.email ?? params.body?.username })
         }
         return {
             data: response.data,
@@ -77,6 +78,21 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
             error: e.message || 'Errore di connessione',
             details: e.response?.data || null
         };
+
+        // Estrazione messaggio d'errore leggibile
+        let errorMsg = errorResponse.error;
+        if (errorResponse.details) {
+            if (typeof errorResponse.details === 'string') {
+                errorMsg = errorResponse.details;
+            } else if (errorResponse.details.message) {
+                errorMsg = errorResponse.details.message;
+            } else if (errorResponse.details.error) {
+                errorMsg = errorResponse.details.error;
+            }
+        }
+
+        // Visualizza l'overlay di errore globale
+        showError(errorMsg);
 
         throw errorResponse;
     }
