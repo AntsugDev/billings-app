@@ -1,0 +1,38 @@
+name: Expo Release Build
+
+on:
+  push:
+    # Il workflow scatta ogni volta che fai il push di un tag di versione (es. v1.0.0, v1.2.3)
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build con EAS
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Scarica il codice dal repository Git
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configura Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      # 3. Configura EAS CLI
+      - name: Setup Expo / EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # 4. Installa le dipendenze del progetto
+      - name: Install dependencies
+        run: npm ci
+
+      # 5. Avvia la build su EAS (per Android, es. profilo production)
+      - name: Build Android App con EAS
+        run: eas build --platform android --profile production --non-interactive
