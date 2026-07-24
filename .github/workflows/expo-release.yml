@@ -35,4 +35,4 @@ jobs:
 
       # 5. Avvia la build su EAS (per Android, es. profilo production)
       - name: Build Android App con EAS
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile development --non-interactive
