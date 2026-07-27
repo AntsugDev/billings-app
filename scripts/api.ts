@@ -59,16 +59,27 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
             params: queryParams, // Axios appende la query string in automatico in modo sicuro
             data: params.body
         };
-        console.log(JSON.stringify(config, null,2))
+        console.log("------------------------------------------------------------------")
+        console.log('REQUEST:', JSON.stringify(config, null, 2))
+        console.log("------------------------------------------------------------------")
+
         const response: AxiosResponse = await axios(config);
         if (params.url.includes('login')) {
-            await globalLogin({ response: response.data, fallbackUsername: params.body?.email ?? params.body?.username })
+            await globalLogin({response: response.data, fallbackUsername: params.body?.email ?? params.body?.username})
         }
-        return {
-            data: response.data,
-            status: response.status,
-            message: response.statusText
-        };
+        // console.log('RESPONSE:', JSON.stringify(response.data, null, 2))
+        if (response.data?.data)
+            return {
+                data: response.data.data,
+                status: response.status,
+                message: response.statusText
+            };
+        else
+            return {
+                data: response.data,
+                status: response.status,
+                message: response.statusText
+            };
 
     } catch (e: any) {
         // Gestione avanzata degli errori di Axios per popolare la ResponseKO

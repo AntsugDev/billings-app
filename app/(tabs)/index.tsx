@@ -17,6 +17,7 @@ import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { CallApi } from '@/scripts/api';
+import {setDataUtilities} from "@/scripts/store/ExtraStore";
 
 interface Utility {
   id: number;
@@ -67,6 +68,7 @@ export default function UtenzeScreen() {
       } else if (res.data && Array.isArray(res.data.data)) {
         listData = res.data.data;
       }
+      await setDataUtilities(JSON.stringify(listData))
       setUtilities(listData);
     } catch (err) {
       console.log('Errore fetch utilities:', err);

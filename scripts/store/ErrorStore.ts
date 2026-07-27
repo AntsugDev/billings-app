@@ -12,6 +12,7 @@ export const showError = (message: string) => {
 
 export const clearError = () => {
   currentError = null;
+  //todo in caso di non autenticato aggiungere il redirect all logout
   listeners.forEach((listener) => listener(currentError));
 };
 
