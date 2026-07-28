@@ -45,3 +45,5 @@ app-example
 AGENTS.md
 tasking.md
 CLAUDE.md
+
+.env.local

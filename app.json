@@ -41,7 +41,16 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@sentry/react-native",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "billings_fe",
+          "organization": "antsug83dev"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

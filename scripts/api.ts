@@ -1,6 +1,7 @@
 import axios, {AxiosHeaders, AxiosRequestConfig, AxiosResponse} from "axios";
 import {getAuthToken, globalLogin} from "@/scripts/store/AuthStore";
 import {showError} from "@/scripts/store/ErrorStore";
+import * as Sentry from '@sentry/react-native';
 
 export interface ResponseOK<T = any> {
     data: T;
@@ -24,6 +25,7 @@ export interface ParamsApi {
 }
 
 export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
+    let config: AxiosRequestConfig = {}
     try {
         const path_base = process.env.EXPO_PUBLIC_API_URL;
         const globalUrl = path_base + params.url;
@@ -52,17 +54,22 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
             headers.set('Authorization', `Bearer ${token}`);
         }
 
-        const config: AxiosRequestConfig = {
+        config = {
             url: globalUrl,
             method: params.method,
             headers: headers,
             params: queryParams, // Axios appende la query string in automatico in modo sicuro
             data: params.body
         };
-        console.log("------------------------------------------------------------------")
-        console.log('REQUEST:', JSON.stringify(config, null, 2))
-        console.log("------------------------------------------------------------------")
-
+        Sentry.addBreadcrumb({
+            category: 'api',
+            level: "info",
+            message: `Chiamata ${config.method || 'GET'} a ${config.url}`,
+            data: {
+                queryString: queryParams,
+                body: config.data
+            }
+        })
         const response: AxiosResponse = await axios(config);
         if (params.url.includes('login')) {
             await globalLogin({response: response.data, fallbackUsername: params.body?.email ?? params.body?.username})
@@ -104,6 +111,11 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
 
         // Visualizza l'overlay di errore globale
         showError(errorMsg);
+        Sentry.captureException(errorResponse, {
+            extra: {
+                payload_request: config,
+            },
+        });
 
         throw errorResponse;
     }

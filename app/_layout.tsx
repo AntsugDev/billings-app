@@ -7,6 +7,26 @@ import 'react-native-reanimated';
 
 import { isValid, getDataUser } from '@/scripts/store/AuthStore';
 import { ErrorOverlay } from '@/components/ErrorOverlay';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://222d66e7e3452f23d0f4249e26e3e065@o4510681510313984.ingest.de.sentry.io/4511811672932432',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 
 // Define a premium light theme for the application
 const BillingsTheme = {
@@ -71,7 +91,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   return (
     <ThemeProvider value={BillingsTheme}>
       <AuthGuard>
@@ -85,4 +105,4 @@ export default function RootLayout() {
       <StatusBar style="dark" />
     </ThemeProvider>
   );
-}
+});
