@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect} from 'react';
+import { router } from "expo-router";
 
 type ErrorListener = (error: string | null) => void;
 const listeners = new Set<ErrorListener>();
@@ -6,26 +7,37 @@ const listeners = new Set<ErrorListener>();
 let currentError: string | null = null;
 
 export const showError = (message: string) => {
-  currentError = message;
-  listeners.forEach((listener) => listener(currentError));
+    currentError = message;
+    listeners.forEach((listener) => listener(currentError));
 };
 
 export const clearError = () => {
-  currentError = null;
-  //todo in caso di non autenticato aggiungere il redirect all logout
-  listeners.forEach((listener) => listener(currentError));
+    let status = null;
+    if (currentError)
+        status = currentError === 'Unauthenticated.'
+    currentError = null;
+    listeners.forEach((listener) => listener(currentError));
+    if (status) {
+        router.replace({
+            pathname: '/login',
+            params: {
+                logout: 1
+            }
+        })
+        return;
+    }
 };
 
 export const useGlobalError = () => {
-  const [error, setError] = useState<string | null>(currentError);
+    const [error, setError] = useState<string | null>(currentError);
 
-  useEffect(() => {
-    const listener = (newError: string | null) => setError(newError);
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
+    useEffect(() => {
+        const listener = (newError: string | null) => setError(newError);
+        listeners.add(listener);
+        return () => {
+            listeners.delete(listener);
+        };
+    }, []);
 
-  return { error, clearError };
+    return {error, clearError};
 };

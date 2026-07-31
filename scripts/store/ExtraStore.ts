@@ -10,9 +10,10 @@ export const setDataUtilities = async (data: string) => {
     }
 }
 
-export const getFromNameUtilities = async (name: string) => {
+export const getFromNameUtilities = async (name?: string) => {
 
     try {
+        if(!name) return ;
         const response = await SecureStore.getItemAsync(KEY_DATA)
         if (response) {
             const decode = JSON.parse(response)

@@ -59,7 +59,7 @@ const resolveLoginPayload = (payload?: LoginPayload | any) => {
         response?.data?.expiration,
     );
 
-    return { username, name, token, expiresAt };
+    return {username, name, token, expiresAt};
 }
 
 export const exipred = async (exp?: string) => {
@@ -86,12 +86,11 @@ export const isValid = async () => {
 export const globalLogin = async (payload?: LoginPayload | any) => {
     try {
         if (payload) {
-            const { username, name, token, expiresAt } = resolveLoginPayload(payload)
+            const {username, name, token, expiresAt} = resolveLoginPayload(payload)
             if (!username || !token) {
                 throw new Error('La risposta di login non contiene username/email o token');
             }
-
-            const user: User = { username, name }
+            const user: User = {username, name}
             const userTokenKey = btoa(username)
             await auth(AUTH_TOKEN_KEY, token)
             await auth(userTokenKey, token)
@@ -143,21 +142,9 @@ export const getDataUser = async () => {
     }
 }
 
-export const getAuthToken = async (username?: string) => {
+export const getAuthToken = async () => {
     try {
-        const token = await getData(AUTH_TOKEN_KEY);
-        if (token) return token;
-
-        if (username) {
-            return await getData(btoa(username));
-        }
-
-        const user = await getDataUser();
-        if (user?.username) {
-            return await getData(btoa(user.username));
-        }
-
-        return null;
+        return await getData(AUTH_TOKEN_KEY);
     } catch (e) {
         throw e;
     }
@@ -172,8 +159,17 @@ export const getData = async (key?: string) => {
         throw e;
     }
 }
+export const delToken = async () => {
+    try {
+        await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY)
+        await SecureStore.deleteItemAsync(USER_DATA_KEY)
+        await SecureStore.deleteItemAsync(EXPIRED_KEY)
+    } catch (e) {
+        throw e;
+    }
+}
 
-export const logout = async (key?: string) => {
+export const logoutStore = async (key?: string) => {
     try {
         if (key)
             await SecureStore.deleteItemAsync(key)

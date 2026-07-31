@@ -1,7 +1,9 @@
 import axios, {AxiosHeaders, AxiosRequestConfig, AxiosResponse} from "axios";
-import {getAuthToken, globalLogin} from "@/scripts/store/AuthStore";
+import {delToken, getAuthToken, globalLogin, logoutStore} from "@/scripts/store/AuthStore";
 import {showError} from "@/scripts/store/ErrorStore";
 import * as Sentry from '@sentry/react-native';
+import {use} from "react";
+import {router} from "expo-router";
 
 export interface ResponseOK<T = any> {
     data: T;
@@ -45,15 +47,9 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
         const headers = new AxiosHeaders();
         headers.set('Content-Type', 'application/json');
         headers.set('Accept', 'application/json');
-
-        // Se la rotta non è il login, verifica ed imposta il token Bearer
         if (!params.url.includes('login')) {
-            if (!token) {
-                throw new Error("Per procedere con la richiesta è necessario un token valido");
-            }
             headers.set('Authorization', `Bearer ${token}`);
         }
-
         config = {
             url: globalUrl,
             method: params.method,
@@ -120,3 +116,22 @@ export const CallApi = async (params: ParamsApi): Promise<ResponseOK> => {
         throw errorResponse;
     }
 };
+
+export const logoutApi = async (user?:string) => {
+    try {
+        if(user) {
+            const response = await CallApi({
+                url: '/logout',
+                method: 'GET'
+            } as ParamsApi)
+            console.log('LOGOUT EFFETTUATO', response)
+            if (response)
+                await logoutStore(user)
+        }else{
+            await delToken()
+        }
+    } catch (e) {
+        console.log('LOGOUT EXC',e)
+        throw e;
+    }
+}

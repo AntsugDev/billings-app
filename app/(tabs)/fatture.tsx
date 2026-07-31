@@ -44,7 +44,7 @@ interface Invoice {
     };
 }
 
-type TabType = 'Luce' | 'Gas' | 'Acqua';
+type TabType = 'Luce' | 'Gas' | 'Acqua' |null;
 
 interface InvoicePagination {
     page: number;
@@ -70,12 +70,8 @@ const normalizePagination = (pagination: any): InvoicePagination => {
 };
 
 export default function FattureScreen() {
-    const [activeTab, setActiveTab] = useState<TabType>('Luce');
-    const [invoices, setInvoices] = useState<{ Luce: Invoice[], Gas: Invoice[], Acqua: Invoice[] }>({
-        Luce: [],
-        Gas: [],
-        Acqua: []
-    });
+    const [activeTab, setActiveTab] = useState<TabType>(null);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -104,25 +100,28 @@ export default function FattureScreen() {
     // Auto-derived utility for the active tab
     const activeUtility = async () => await idTabs(true);
 
-    const unit =  (item) => {
+    const unit = (item: Invoice) => {
         return item?.residential_utilities?.unit_of_measurement ?? ""
     }
 
     const idTabs = async (ifResult: boolean = false): Promise<number | undefined> => {
-        const filter = await getFromNameUtilities(activeTab)
+        const filter:any= await getFromNameUtilities(activeTab?.toString())
         if (filter.length > 0) return !ifResult ? filter[0].id : filter[0]
         else new Error("Impossibile procedere con la richiesta di estrazione dei dati")
     }
+    const changeTabs = (status:'Luce' |'Gas' | 'Acqua') => {
+        setActiveTab(status)
+        fetchInvoices
+    }
+
     const fetchInvoices = useCallback(async (page: number, size: number) => {
         setLoading(true);
-        if(refTabs.current.activeTab !== activeTab){
+        console.log(refTabs.current.activeTab, activeTab)
+        if (refTabs.current.activeTab !== activeTab) {
             pagination.page = 1;
             pagination.size = 3;
-            setInvoices(prevState => ({
-                ...prevState,
-                [activeTab]: []
-            }));
         }
+        setInvoices([]);
         const q = new Map();
         q.set('page', page)
         q.set('size', size)
@@ -136,12 +135,9 @@ export default function FattureScreen() {
                 method: 'GET',
                 queryString: q,
             });
-            let listI: Invoice[] = resI.data.content;
+            const listI: Invoice[] = resI.data.content;
             const nextPagination = normalizePagination(resI.data.pagination);
-            setInvoices(prevState => ({
-                ...prevState,
-                [activeTab]: listI
-            }));
+            setInvoices(listI);
             setPagination(nextPagination);
         } catch (e) {
             console.log('Errore fetch invoices:', e);
@@ -152,7 +148,7 @@ export default function FattureScreen() {
 
     useEffect(() => {
         fetchInvoices(pagination.page, pagination.size);
-    }, [pagination.page, pagination.size, activeTab]);
+    }, [pagination.page, pagination.size]);
 
     const createUtilityShortcut = async () => {
         setLoading(true);
@@ -211,7 +207,7 @@ export default function FattureScreen() {
         setExpenseError('');
         setModalVisible(true);
     };
-
+    const active:any = activeUtility();
     const handleSave = async () => {
         let valid = true;
         if (!year.trim()) {
@@ -242,7 +238,7 @@ export default function FattureScreen() {
             setExpenseError('');
         }
 
-        if (!valid || !activeUtility) return;
+        if (!valid || !active) return;
 
         const payload = {
             year: year.trim(),
@@ -250,7 +246,7 @@ export default function FattureScreen() {
             consumption: parseInt(consumption.trim()),
             real_consumption: isReal,
             expense: parseFloat(expense.trim()),
-            residential_utilities_id: activeUtility.id,
+            residential_utilities_id: active?.id ?? new Error("Impossibile estrarre il dato dell'utenza") ,
         };
 
         try {
@@ -307,7 +303,7 @@ export default function FattureScreen() {
 
     // Calculations for current year
     const currentYear = dayjs().format('YYYY');
-    const invoicesCurrentYear = invoices[activeTab].filter(inv => inv.year === currentYear);
+    const invoicesCurrentYear = invoices.filter(inv => inv.year === currentYear);
     const totalConsumptionCurrentYear = invoicesCurrentYear.reduce((acc, inv) => acc + (inv.consumption || 0), 0);
     const totalExpenseCurrentYear = invoicesCurrentYear.reduce((acc, inv) => acc + parseExpense(inv.expense), 0);
 
@@ -365,7 +361,7 @@ export default function FattureScreen() {
                 <View style={styles.gridItem}>
                     <Text style={styles.gridLabel}>Consumo</Text>
                     <Text style={styles.gridValue}>
-                        {item.consumption} {activeUtility?.unit_of_measurement || ''}
+                        {item.consumption} {active?.unit_of_measurement || ''}
                     </Text>
                 </View>
 
@@ -377,7 +373,7 @@ export default function FattureScreen() {
                 <View style={styles.gridItem}>
                     <Text style={styles.gridLabel}>Costo Unitario</Text>
                     <Text style={styles.gridValue}>
-                      {parseFloat(item.unit_cost).toFixed(2)} € / {unit(item)}
+                        {parseFloat(item.unit_cost).toFixed(2)} € / {unit(item)}
                     </Text>
                 </View>
             </View>
@@ -391,7 +387,7 @@ export default function FattureScreen() {
             <View style={styles.tabHeader}>
                 <TouchableOpacity
                     style={[styles.tabButton, activeTab === 'Luce' && styles.tabButtonActive]}
-                    onPress={() => setActiveTab('Luce')}
+                    onPress={() =>  changeTabs('Luce')}
                 >
                     <Ionicons name="flash-outline" size={18} color={activeTab === 'Luce' ? '#0D9488' : '#64748B'}/>
                     <Text style={[styles.tabText, activeTab === 'Luce' && styles.tabTextActive]}>Luce</Text>
@@ -399,7 +395,7 @@ export default function FattureScreen() {
 
                 <TouchableOpacity
                     style={[styles.tabButton, activeTab === 'Gas' && styles.tabButtonActive]}
-                    onPress={() => setActiveTab('Gas')}
+                    onPress={() => changeTabs('Gas')}
                 >
                     <Ionicons name="flame-outline" size={18} color={activeTab === 'Gas' ? '#0D9488' : '#64748B'}/>
                     <Text style={[styles.tabText, activeTab === 'Gas' && styles.tabTextActive]}>Gas</Text>
@@ -407,7 +403,7 @@ export default function FattureScreen() {
 
                 <TouchableOpacity
                     style={[styles.tabButton, activeTab === 'Acqua' && styles.tabButtonActive]}
-                    onPress={() => setActiveTab('Acqua')}
+                    onPress={() => changeTabs('Acqua')}
                 >
                     <Ionicons name="water-outline" size={18} color={activeTab === 'Acqua' ? '#0D9488' : '#64748B'}/>
                     <Text style={[styles.tabText, activeTab === 'Acqua' && styles.tabTextActive]}>Acqua</Text>
@@ -415,7 +411,7 @@ export default function FattureScreen() {
             </View>
 
 
-            {loading && invoices[activeTab].length === 0 ? (
+            {loading && invoices.length === 0 ? (
                 <View style={styles.centered}>
                     <ActivityIndicator size="large" color="#0D9488"/>
                 </View>
@@ -440,7 +436,7 @@ export default function FattureScreen() {
                         </View>
                     </View>
                     <FlatList
-                        data={invoices[activeTab]}
+                        data={invoices}
                         renderItem={renderInvoiceCard}
                         keyExtractor={(item) => item.id.toString()}
                         contentContainerStyle={styles.listContainer}
@@ -520,7 +516,7 @@ export default function FattureScreen() {
                             <View style={styles.summaryCol}>
                                 <Text style={styles.summaryLabel}>Riepilogo {currentYear} — Consumo</Text>
                                 <Text style={styles.summaryValue}>
-                                    {totalConsumptionCurrentYear} {activeUtility.unit_of_measurement || ''}
+                                    {totalConsumptionCurrentYear} {active.unit_of_measurement || ''}
                                 </Text>
                             </View>
                             <View style={styles.summaryColRight}>
@@ -582,7 +578,7 @@ export default function FattureScreen() {
                             />
 
                             <Input
-                                label={`Consumo in ${activeUtility?.unit_of_measurement || 'unità'} *`}
+                                label={`Consumo in ${active?.unit_of_measurement || 'unità'} *`}
                                 placeholder="es: 150"
                                 value={consumption}
                                 onChangeText={setConsumption}
@@ -617,7 +613,7 @@ export default function FattureScreen() {
                                 <Ionicons name="information-circle-outline" size={18} color="#0D9488"/>
                                 <Text style={styles.calculationText}>
                                     Costo Unitario Calcolato: <Text
-                                    style={styles.calculationBold}>{getDynamicUnitCost()} €/{activeUtility?.unit_of_measurement || ''}</Text>
+                                    style={styles.calculationBold}>{getDynamicUnitCost()} €/{active?.unit_of_measurement || ''}</Text>
                                 </Text>
                             </View>
 
